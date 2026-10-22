@@ -1,0 +1,19 @@
+{% extends "admin_base.html" %}
+{% block title %}Admin login{% endblock %}
+{% block body %}
+<div class="bar">
+  <div class="in"><b>Event Hub<span>.</span> admin</b><a href="{{ url_for('index') }}">Back to site</a></div>
+</div>
+<main style="max-width: 420px">
+  <h1>Admin login</h1>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% for cat, msg in messages %}<div class="flash {{ cat }}" role="alert">{{ msg }}</div>{% endfor %}
+  {% endwith %}
+  <form method="post" class="card" style="display:grid; gap:14px">
+    <label for="password">Password
+      <input id="password" name="password" type="password" autocomplete="current-password" required autofocus>
+    </label>
+    <div><button type="submit">Log in</button></div>
+  </form>
+</main>
+{% endblock %}

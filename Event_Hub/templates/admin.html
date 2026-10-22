@@ -1,0 +1,188 @@
+{% extends "admin_base.html" %}
+{% block title %}Event Hub admin{% endblock %}
+{% macro event_fields(e=None) %}
+<div class="grid2">
+  <label>Title<input name="title" maxlength="120" required value="{{ e.title if e else '' }}"></label>
+  <label>Date<input name="date" type="date" required value="{{ e.date if e else '' }}"></label>
+  <label>Time (for example 6:30 pm)<input name="time" maxlength="20" required value="{{ e.time if e else '' }}"></label>
+  <label>Seats (0 means no limit)<input name="capacity" type="number" min="0"
+      value="{{ e.capacity if e else 0 }}"></label>
+  <label>Venue name<input name="venue" maxlength="120" value="{{ e.venue if e else '' }}"></label>
+  <label>Address<input name="address" maxlength="200" value="{{ e.address if e else '' }}"></label>
+  <label style="grid-column: 1 / -1;">Event Image URL (e.g. Unsplash photo link)
+    <input name="image" maxlength="255" placeholder="https://images.unsplash.com/..."
+      value="{{ e.image if e else '' }}">
+  </label>
+</div>
+<div class="checks" role="group" aria-label="Who can come">
+  {% for a in audiences %}
+  <label class="inline"><input type="checkbox" name="audience" value="{{ a }}" {% if e and a in e.audience.split(',')
+      %}checked{% endif %}> {{ a }}</label>
+  {% endfor %}
+</div>
+<label>Description<textarea name="info" maxlength="500" required>{{ e.info if e else '' }}</textarea></label>
+{% endmacro %}
+
+{% block body %}
+<div class="bar">
+  <div class="in">
+    <b>Event Hub<span>.</span> admin</b>
+    <div class="right">
+      <a href="{{ url_for('index') }}" target="_blank" rel="noopener">View site</a>
+      <form method="post" action="{{ url_for('admin_logout') }}">
+        <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+        <button class="ghost" type="submit">Log out</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<main>
+  {% if default_password %}
+  <div class="flash err warn" role="alert">You are using the default password. Set the ADMIN_PASSWORD environment
+    variable before going live.</div>
+  {% endif %}
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% for cat, msg in messages %}<div class="flash {{ cat }}" role="status">{{ msg }}</div>{% endfor %}
+  {% endwith %}
+
+  <div class="stats">
+    <div><b>{{ events|selectattr('date', 'ge', today)|list|length }}</b><span>Upcoming events</span></div>
+    <div><b>{{ regs|length }}</b><span>Registrations</span></div>
+    <div><b>{{ regs|sum(attribute='seats') }}</b><span>Seats booked</span></div>
+  </div>
+
+  <section class="card">
+    <h2>Events</h2>
+    <details style="margin: 14px 0 6px">
+      <summary>Add a new event</summary>
+      <form method="post" action="{{ url_for('admin_add_event') }}" style="display:grid; gap:14px; margin-top:14px">
+        <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+        {{ event_fields() }}
+        <div><button type="submit">Add event</button></div>
+      </form>
+    </details>
+
+    {% if not events %}<p class="muted">No events yet. Add the first one above.</p>{% endif %}
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Event</th>
+            <th>For</th>
+            <th>Seats</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for e in events %}
+          <tr>
+            <td class="num">{{ e.date }}<br><span class="muted">{{ e.time }}</span></td>
+            <td><b>{{ e.title }}</b><br><span class="muted">{{ e.venue or 'No venue yet' }}</span>{% if e.date < today
+                %} <span class="muted">(past)</span>{% endif %}</td>
+            <td>{{ e.audience.replace(',', ', ') }}</td>
+            <td class="num">{{ taken.get(e.id, 0) }}{% if e.capacity %} / {{ e.capacity }}{% else %} / no limit{% endif
+              %}</td>
+            <td>
+              <div class="row-actions">
+                <details>
+                  <summary>Edit</summary>
+                  <form method="post" action="{{ url_for('admin_edit_event', ev_id=e.id) }}"
+                    style="display:grid; gap:12px; margin-top:12px; min-width:min(520px, 80vw)">
+                    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+                    {{ event_fields(e) }}
+                    <div><button type="submit">Save changes</button></div>
+                  </form>
+                </details>
+                <form method="post" action="{{ url_for('admin_delete_event', ev_id=e.id) }}"
+                  onsubmit="return confirm('Delete this event and all its registrations?')">
+                  <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+                  <button class="danger" type="submit">Delete</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:center">
+      <h2>Registrations</h2>
+      <a class="btn" href="{{ url_for('admin_csv') }}">Download CSV</a>
+    </div>
+    <div class="grid2" style="margin: 14px 0">
+      <label>Search name or phone<input id="q" type="search" placeholder="Type to filter"></label>
+      <label>Event
+        <select id="evf">
+          <option value="">All events</option>
+          {% for e in events %}<option value="{{ e.title }}">{{ e.title }}</option>{% endfor %}
+        </select>
+      </label>
+    </div>
+    {% if not regs %}<p class="muted">No registrations yet.</p>{% endif %}
+    <div class="scroll">
+      <table id="regTable">
+        <thead>
+          <tr>
+            <th>When</th>
+            <th>Event</th>
+            <th>Name</th>
+            <th>Phone</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Seats</th>
+            <th>Message</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in regs %}
+          <tr data-event="{{ r.event_title }}" data-text="{{ (r.name ~ ' ' ~ r.phone)|lower }}">
+            <td class="num">{{ r.created_at or '' }}</td>
+            <td>{{ r.event_title }}</td>
+            <td>{{ r.name }}</td>
+            <td class="num">{{ r.phone }}</td>
+            <td>{{ r.email or '' }}</td>
+            <td>{{ r.role }}</td>
+            <td class="num">{{ r.seats }}</td>
+            <td>{{ r.message or '' }}</td>
+            <td>
+              <div class="row-actions">
+                {% if r.status == 'confirmed' %}
+                <span style="color: var(--ok); font-weight: 700; font-size: 13px;">CONFIRMED</span>
+                {% elif r.status == 'rejected' %}
+                <span style="color: var(--err); font-weight: 700; font-size: 13px;">REJECTED</span>
+                <form method="post" action="{{ url_for('admin_confirm_registration', reg_id=r.id) }}">
+                  <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+                  <button class="accept" type="submit">Accept</button>
+                </form>
+                {% else %}
+                <form method="post" action="{{ url_for('admin_confirm_registration', reg_id=r.id) }}">
+                  <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+                  <button class="accept" type="submit">Accept</button>
+                </form>
+                <form method="post" action="{{ url_for('admin_reject_registration', reg_id=r.id) }}">
+                  <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+                  <button class="danger" type="submit">Reject</button>
+                </form>
+                {% endif %}
+                <form method="post" action="{{ url_for('admin_delete_registration', reg_id=r.id) }}"
+                  onsubmit="return confirm('Delete this registration permanently?')">
+                  <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+                  <button class="danger" type="submit">Delete</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+<script src="{{ url_for('static', filename='admin.js') }}"></script>
+{% endblock %}

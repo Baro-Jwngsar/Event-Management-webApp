@@ -1,0 +1,23 @@
+Event_Hub/
+│
+├── .env
+├── .gitignore
+├── app.py
+├── database.db
+├── plain.txt
+├── requirements.txt
+│
+├── static/
+│   ├── admin.css
+│   ├── admin.js
+│   ├── qrcode.js
+│   ├── script.js
+│   └── style.css
+│
+└── templates/
+    ├──
+    ├── admin_base.html
+    ├── admin_login.html
+    ├── admin.html
+    └── index.html
+
