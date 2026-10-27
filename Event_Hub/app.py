@@ -107,7 +107,7 @@ def read_event_form(form):
 @app.route('/')
 def index():
     host_data = {
-        'phone': '+91 9678404676',
+        'phone': '+91 XXXXXXXXXX',
         'email': 'host@eventhub.local',
         'hours': 'Mon-Sat, 10 am - 6 pm'
     }
