@@ -1,40 +1,24 @@
 :root {
-  color-scheme: light;
+  color-scheme: dark;
   box-sizing: border-box;
   padding-top: env(safe-area-inset-top, 0px);
   padding-bottom: env(safe-area-inset-bottom, 0px);
-  --bg: #F4F6F9;
-  --surface: #FFFFFF;
-  --ink: #14213D;
-  --muted: #55627A;
-  --line: #D9DFE8;
+
+  /* Whole Page Full Navy Theme Palette */
+  --bg: #14213D;
+  --surface: #1C2D4B;
+  --ink: #FFFFFF;
+  --muted: #94A3B8;
+  --line: #2C3E60;
   --navy: #14213D;
-  --on-navy: #F4F6F9;
+  --on-navy: #FFFFFF;
   --accent: #F2B705;
   --on-accent: #14213D;
-  --link: #1F4FD8;
-  --ok: #17794F;
-  --err: #B3261E;
+  --link: #60A5FA;
+  --ok: #34D399;
+  --err: #F87171;
   --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
   --font-body: "Public Sans", "Segoe UI", system-ui, sans-serif;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #0E1626;
-    --surface: #16213A;
-    --ink: #EAEFF7;
-    --muted: #9AA7BF;
-    --line: #2A3858;
-    --navy: #0A1120;
-    --on-navy: #EAEFF7;
-    --accent: #F2B705;
-    --on-accent: #14213D;
-    --link: #8FB0FF;
-    --ok: #5CD197;
-    --err: #FF8A80;
-    color-scheme: dark;
-  }
 }
 
 * {
@@ -44,6 +28,7 @@
 html {
   scroll-behavior: smooth;
   scroll-padding-top: env(safe-area-inset-top, 0px);
+  background-color: var(--bg);
 }
 
 body {
@@ -68,6 +53,7 @@ h3 {
   line-height: 1.1;
   margin: 0;
   text-wrap: balance;
+  color: var(--ink);
 }
 
 p {
@@ -98,6 +84,7 @@ header.top {
   z-index: 10;
   background: var(--navy);
   color: var(--on-navy);
+  border-bottom: 1px solid var(--line);
   margin-left: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
   margin-right: calc(-1 * max(16px, env(safe-area-inset-right, 0px)));
   padding-left: max(16px, env(safe-area-inset-left, 0px));
@@ -126,7 +113,7 @@ header.top .wrap {
   color: var(--accent);
 }
 
-/* --- Header Navigation High-End Hover Effect --- */
+/* Header Navigation Hover Effect */
 header.top nav {
   display: flex;
   gap: 4px 22px;
@@ -174,7 +161,7 @@ header.top nav a:hover::after {
   transform: scaleX(1);
 }
 
-/* --- Hero Section & Background Square Grid Fix --- */
+/* Hero Section & High-Contrast Visible Square Grid */
 .hero {
   background: var(--navy);
   color: var(--on-navy);
@@ -187,13 +174,13 @@ header.top nav a:hover::after {
   overflow: hidden;
 }
 
-/* Dedicated background grid layer maintaining exact 40px square pattern on mobile and desktop */
+/* Clearly visible 40px square grid pattern */
 .hero::before {
   content: "";
   position: absolute;
   inset: 0;
-  background-image: linear-gradient(to right, color-mix(in srgb, var(--on-navy) 6%, transparent) 1px, transparent 1px),
-    linear-gradient(to bottom, color-mix(in srgb, var(--on-navy) 6%, transparent) 1px, transparent 1px);
+  background-image: linear-gradient(to right, rgba(255, 255, 255, 0.12) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.12) 1px, transparent 1px);
   background-size: 40px 40px;
   background-repeat: repeat;
   z-index: 0;
@@ -219,7 +206,7 @@ header.top nav a:hover::after {
 }
 
 .chart .grid {
-  stroke: color-mix(in srgb, var(--on-navy) 14%, transparent);
+  stroke: rgba(255, 255, 255, 0.15);
   stroke-width: 1;
   vector-effect: non-scaling-stroke;
 }
@@ -228,14 +215,6 @@ header.top nav a:hover::after {
   fill: var(--accent);
   opacity: 0;
   animation: glow var(--dur) ease-in-out var(--delay) infinite;
-}
-
-@media (max-width: 768px) {
-  .chart {
-    width: 100% !important;
-    height: 100% !important;
-    object-fit: cover;
-  }
 }
 
 @keyframes glow {
@@ -247,11 +226,11 @@ header.top nav a:hover::after {
   }
 
   65% {
-    opacity: .22;
+    opacity: .35;
   }
 
   80% {
-    opacity: .08;
+    opacity: .12;
   }
 }
 
@@ -270,7 +249,7 @@ header.top nav a:hover::after {
   margin-top: 18px;
   font-size: 18px;
   max-width: 46ch;
-  color: color-mix(in srgb, var(--on-navy) 82%, transparent);
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .cta-row {
@@ -295,7 +274,7 @@ header.top nav a:hover::after {
 .btn.ghost {
   background: transparent;
   color: var(--on-navy);
-  border-color: color-mix(in srgb, var(--on-navy) 45%, transparent);
+  border-color: rgba(255, 255, 255, 0.4);
 }
 
 .btn.ghost:hover {
@@ -306,7 +285,7 @@ header.top nav a:hover::after {
   filter: brightness(1.06);
 }
 
-/* --- Hero Animated Card Stack Styling --- */
+/* Hero Animated Card Stack Styling */
 .hero-card-stack-wrapper {
   position: relative;
   width: 100%;
@@ -320,10 +299,10 @@ header.top nav a:hover::after {
   inset: 0;
   background-size: cover;
   background-position: center;
-  background-color: #0E1626;
+  background-color: var(--surface);
   border-radius: 16px;
   border: 1px solid var(--line);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
   padding: 24px;
   display: flex;
   flex-direction: column;
@@ -339,7 +318,7 @@ header.top nav a:hover::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(to top, #0E1626 35%, rgba(14, 22, 38, 0.92) 75%, rgba(14, 22, 38, 0.7) 100%);
+  background: linear-gradient(to top, #14213D 35%, rgba(20, 33, 61, 0.92) 75%, rgba(20, 33, 61, 0.7) 100%);
   z-index: 1;
 }
 
@@ -401,7 +380,7 @@ header.top nav a:hover::after {
 }
 
 .hero-card .btn-register:hover {
-  filter: brightness(1.0);
+  filter: brightness(1.05);
 }
 
 section {
@@ -429,20 +408,21 @@ section h2.title {
   margin-top: 22px;
 }
 
-.chip {
+.pill {
   font: 500 14px var(--font-body);
-  padding: 7px 14px;
+  padding: 7px 16px;
   border-radius: 999px;
   cursor: pointer;
   border: 1px solid var(--line);
   background: var(--surface);
   color: var(--ink);
+  transition: all 0.2s ease;
 }
 
-.chip[aria-pressed="true"] {
-  background: var(--navy);
-  color: var(--on-navy);
-  border-color: var(--navy);
+.pill.active {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--accent);
 }
 
 .events {
@@ -471,6 +451,7 @@ section h2.title {
   font-size: 36px;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
+  color: var(--accent);
 }
 
 .date span {
@@ -504,8 +485,8 @@ section h2.title {
   font-weight: 600;
   padding: 2px 9px;
   border-radius: 3px;
-  background: color-mix(in srgb, var(--accent) 28%, transparent);
-  color: var(--ink);
+  background: rgba(242, 183, 5, 0.18);
+  color: var(--accent);
 }
 
 .ev .btn {
@@ -513,7 +494,7 @@ section h2.title {
   font-size: 14px;
   background: transparent;
   color: var(--ink);
-  border-color: var(--ink);
+  border-color: var(--line);
 }
 
 .ev .btn:hover {
@@ -538,7 +519,7 @@ section h2.title {
   background: var(--surface);
   border: 1px solid var(--line);
   padding: 22px;
-  border-radius: 6px;
+  border-radius: 8px;
   min-width: 0;
 }
 
@@ -556,6 +537,7 @@ section h2.title {
   margin: 12px 0 0;
   padding-left: 18px;
   font-size: 14.5px;
+  color: var(--muted);
 }
 
 .card .for {
@@ -572,6 +554,7 @@ section h2.title {
 .about p {
   max-width: 62ch;
   margin-top: 14px;
+  color: var(--muted);
 }
 
 .steps {
@@ -596,15 +579,16 @@ section h2.title {
   height: 34px;
   display: grid;
   place-items: center;
-  background: var(--navy);
+  background: var(--surface);
   color: var(--accent);
+  border: 1px solid var(--line);
   border-radius: 50%;
 }
 
 .register {
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: 8px;
   margin-top: 64px;
   padding: 32px;
   display: grid;
@@ -631,6 +615,7 @@ label {
   font-weight: 600;
   font-size: 14px;
   min-width: 0;
+  color: var(--ink);
 }
 
 input,
@@ -646,6 +631,13 @@ textarea {
   min-width: 0;
 }
 
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
 textarea {
   min-height: 84px;
   resize: vertical;
@@ -654,14 +646,6 @@ textarea {
 .status {
   min-height: 24px;
   font-weight: 500;
-}
-
-.status.ok {
-  color: var(--ok);
-}
-
-.status.err {
-  color: var(--err);
 }
 
 .qrbox {
@@ -708,6 +692,7 @@ textarea {
 
 .contact dt {
   font-weight: 600;
+  color: var(--muted);
 }
 
 .contact dd {
@@ -781,13 +766,13 @@ footer {
   border-color: var(--accent);
 }
 
-/* --- Horizontal Toggleable Floating Dock --- */
+/* Horizontal Toggleable Floating Dock */
 .floating-dock.horizontal {
   position: fixed;
   bottom: -80px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(14, 22, 38, 0.95);
+  background: rgba(28, 45, 75, 0.95);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border: 1px solid var(--line);
@@ -877,10 +862,19 @@ footer {
     max-width: 100%;
     margin-top: 20px;
   }
+
+  .row {
+    grid-template-columns: 1fr;
+  }
 }
 
-/* --- Mobile Screen Grid Fix --- */
+/* Mobile Screen Grid Fix */
 @media (max-width: 768px) {
+  .chart {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover;
+  }
 
   .events-grid,
   .card-container {

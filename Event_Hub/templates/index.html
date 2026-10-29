@@ -143,14 +143,14 @@
         <div>
           <p class="label">Registration</p>
           <h2 class="title">Reserve your seat</h2>
-          <form id="regForm" novalidate>
+          <form id="regForm">
             <div class="row">
               <label for="f-name">Full name<input id="f-name" name="name" autocomplete="name" required></label>
-              <label for="f-phone">Phone (WhatsApp)<input id="f-phone" name="phone" type="tel" inputmode="tel"
-                  autocomplete="tel" required></label>
+              <label for="f-phone">Phone (WhatsApp)<input id="f-phone" name="phone" type="tel" inputmode="numeric" pattern="[0-9]{10}" maxlength="10" minlength="10"
+                placeholder="10 digit number" autocomplete="tel" required></label>
             </div>
             <div class="row">
-              <label for="f-email">Email<input id="f-email" name="email" type="email" autocomplete="email"></label>
+              <label for="f-email">Email<input id="f-email" name="email" type="email" placeholder="example@gmail.com" autocomplete="email" required></label>
               <label for="f-role">I am a
                 <select id="f-role" name="role">
                   <option>Student</option>
@@ -160,13 +160,13 @@
               </label>
             </div>
             <div class="row">
-              <label for="f-event">Event<select id="f-event" name="event"></select></label>
+              <label for="f-event">Event<select id="f-event" name="event" required></select></label>
               <label for="f-seats">Number of seats<input id="f-seats" name="seats" type="number" min="1" max="10"
-                  value="1"></label>
+                  value="1" required></label>
             </div>
             <label for="f-msg">Question or message (optional)<textarea id="f-msg" name="message"></textarea></label>
-            <div class="hp" aria-hidden="true"><label for="f-website">Leave this empty<input id="f-website"
-                  name="website" tabindex="-1" autocomplete="off"></label></div>
+            <div class="hp" aria-hidden="true" style="display:none;"><label for="f-website">Leave this empty<input
+                  id="f-website" name="website" tabindex="-1" autocomplete="off"></label></div>
             <div class="terms">
               <details>
                 <summary>Read the terms and conditions</summary>
@@ -180,11 +180,13 @@
                   <li>For any problem or question, contact the host directly.</li>
                 </ol>
               </details>
-              <label class="check" for="f-terms"><input type="checkbox" id="f-terms" name="terms" required> I have read
-                the terms and conditions and I agree to follow them.</label>
+              <label class="check" for="f-terms" style="margin-top:10px; display:flex; gap:8px; align-items:center;">
+                <input type="checkbox" id="f-terms" name="terms" required> I have read the terms and conditions and I
+                agree to follow them.
+              </label>
             </div>
-            <div><button class="btn" type="submit" id="submitBtn">Register</button></div>
-            <p class="status" id="status" role="status" aria-live="polite"></p>
+            <div style="margin-top:14px;"><button class="btn" type="submit" id="submitBtn">Register</button></div>
+            <p class="status" id="status" role="status" aria-live="polite" style="margin-top:10px;"></p>
           </form>
         </div>
         <div class="qrbox">
@@ -240,7 +242,7 @@
     <a href="tel:{{ host.phone | replace(' ', '') }}" class="dock-item">📞 Call</a>
     <a href="mailto:{{ host.email }}" class="dock-item">📧 Email</a>
     <a href="{{ venue.map_link }}" target="_blank" class="dock-item">📍 Location</a>
-    <button class="dock-close"
+    <button class="dock-close" id="closeDock"
       onclick="document.getElementById('floatingDock').classList.remove('show')">&times;</button>
   </div>
 

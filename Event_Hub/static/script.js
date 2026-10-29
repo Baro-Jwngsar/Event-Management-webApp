@@ -114,18 +114,14 @@ document.addEventListener("DOMContentLoaded", () => {
     if (stackInterval) clearInterval(stackInterval);
 
     stackInterval = setInterval(() => {
-
       cards.forEach(card => {
         card.classList.remove('active', 'next', 'prev');
       });
 
-
       cards[currentCardIndex].classList.add('prev');
-
 
       currentCardIndex = (currentCardIndex + 1) % cards.length;
       let nextIndex = (currentCardIndex + 1) % cards.length;
-
 
       cards[currentCardIndex].classList.add('active');
       cards[nextIndex].classList.add('next');
@@ -149,48 +145,94 @@ document.addEventListener("DOMContentLoaded", () => {
     if (select) select.value = id;
   };
 
+  // --- Unified Form Submit & Validation Handler ---
+  // --- Unified Form Submit & Strict Validation Handler ---
   const regForm = document.getElementById("regForm");
   if (regForm) {
-    regForm.addEventListener("submit", (e) => {
+    regForm.addEventListener("submit", async function (e) {
       e.preventDefault();
-      const formData = {
+      const statusEl = document.getElementById("status");
+      const submitBtn = document.getElementById("submitBtn");
+
+      // Honeypot spam check
+      const website = document.getElementById("f-website") ? document.getElementById("f-website").value : "";
+      if (website) return;
+
+      // Check Terms checkbox
+      const terms = document.getElementById("f-terms");
+      if (terms && !terms.checked) {
+        statusEl.innerText = "Please accept the terms and conditions.";
+        statusEl.style.color = "#ff6b6b";
+        terms.focus();
+        return;
+      }
+
+      // Strict 10-Digit Phone Check
+      const phoneInput = document.getElementById("f-phone");
+      const phoneRegex = /^[0-9]{10}$/;
+      if (!phoneRegex.test(phoneInput.value.trim())) {
+        statusEl.innerText = "Please enter a valid 10-digit mobile number.";
+        statusEl.style.color = "#ff6b6b";
+        phoneInput.focus();
+        return;
+      }
+
+      // Strict Email Validation Check
+      const emailInput = document.getElementById("f-email");
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(emailInput.value.trim())) {
+        statusEl.innerText = "Please enter a valid email address.";
+        statusEl.style.color = "#ff6b6b";
+        emailInput.focus();
+        return;
+      }
+
+      // Check Standard HTML5 Form Validity
+      if (!regForm.checkValidity()) {
+        regForm.reportValidity();
+        return;
+      }
+
+      const payload = {
         event_id: document.getElementById("f-event").value,
         name: document.getElementById("f-name").value,
-        phone: document.getElementById("f-phone").value,
-        email: document.getElementById("f-email").value,
+        phone: phoneInput.value.trim(),
+        email: emailInput.value.trim(),
         role: document.getElementById("f-role").value,
         seats: document.getElementById("f-seats").value,
-        message: document.getElementById("f-msg").value,
-        website: document.getElementById("f-website").value
+        message: document.getElementById("f-msg") ? document.getElementById("f-msg").value : ""
       };
 
-      if (formData.website) return;
+      if (submitBtn) submitBtn.disabled = true;
+      statusEl.innerText = "Submitting registration...";
+      statusEl.style.color = "var(--accent, #F2B705)";
 
-      fetch("/api/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData)
-      })
-        .then(res => res.json())
-        .then(data => {
-          const statusEl = document.getElementById("status");
-          if (data.success) {
-            statusEl.style.color = "var(--ok)";
-            statusEl.textContent = data.message;
-            regForm.reset();
-          } else {
-            statusEl.style.color = "var(--err)";
-            statusEl.textContent = data.error;
-          }
-        })
-        .catch(() => {
-          const statusEl = document.getElementById("status");
-          statusEl.style.color = "var(--err)";
-          statusEl.textContent = "Something went wrong. Please try again.";
+      try {
+        const response = await fetch("/api/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
         });
+
+        const resData = await response.json().catch(() => ({}));
+
+        if (response.ok && (resData.success === true || resData.success === "success")) {
+          statusEl.innerText = resData.message || "Registration successful!";
+          statusEl.style.color = "var(--ok, #34D399)";
+          regForm.reset();
+        } else {
+          statusEl.innerText = resData.error || resData.message || "Registration failed. Please try again.";
+          statusEl.style.color = "#ff6b6b";
+        }
+      } catch (err) {
+        statusEl.innerText = "Network error. Please check your connection.";
+        statusEl.style.color = "#ff6b6b";
+      } finally {
+        if (submitBtn) submitBtn.disabled = false;
+      }
     });
   }
-
+  // QR Code Generator
   const qrContainer = document.getElementById("qr");
   if (qrContainer && typeof qrcode !== "undefined") {
     qrContainer.innerHTML = "";
@@ -219,37 +261,20 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Toggle Horizontal Floating Contact Dock on "Contact" click
+  // Toggle Horizontal Floating Contact Dock
   const contactNavLinks = document.querySelectorAll('nav a[href="#contact"]');
-  const contactDock = document.getElementById("contactDock");
-  const closeDock = document.getElementById("closeDock");
-  const dockLocationBtn = document.getElementById("dockLocationBtn");
+  const floatingDock = document.getElementById("floatingDock");
 
   contactNavLinks.forEach(link => {
     link.addEventListener("click", (e) => {
       e.preventDefault();
-      if (contactDock) {
-        contactDock.classList.toggle("show");
+      if (floatingDock) {
+        floatingDock.classList.toggle("show");
       }
     });
   });
 
-  if (closeDock && contactDock) {
-    closeDock.addEventListener("click", () => {
-      contactDock.classList.remove("show");
-    });
-  }
-
-  if (dockLocationBtn && contactDock) {
-    dockLocationBtn.addEventListener("click", () => {
-      contactDock.classList.remove("show");
-      const contactSection = document.getElementById("contact");
-      if (contactSection) {
-        contactSection.scrollIntoView({ behavior: "smooth" });
-      }
-    });
-  }
-  // --- Hero Section Background Grid & Random Glowing Cells Generator ---
+  // SVG Animated Background Grid Generator
   const chart = document.getElementById("chart");
   if (chart) {
     const cols = 30;
@@ -269,17 +294,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     chart.innerHTML = svgContent;
   }
-  // --- Floating Dock Scroll Trigger Logic ---
-  const contactNavBtn = document.querySelector('nav a[href="#contact"]');
-  if (contactNavBtn) {
-    contactNavBtn.addEventListener('click', () => {
-      const dock = document.getElementById("floatingDock");
-      if (dock) {
-        dock.classList.toggle("show");
-      }
-    });
-  }
 });
+
 window.copyText = function (btn, text) {
   if (navigator.clipboard) {
     navigator.clipboard.writeText(text).then(() => {

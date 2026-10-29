@@ -1,5 +1,6 @@
 {% extends "admin_base.html" %}
 {% block title %}Event Hub admin{% endblock %}
+
 {% macro event_fields(e=None) %}
 <div class="grid2">
   <label>Title<input name="title" maxlength="120" required value="{{ e.title if e else '' }}"></label>
@@ -29,7 +30,7 @@
     <b>Event Hub<span>.</span> admin</b>
     <div class="right">
       <a href="{{ url_for('index') }}" target="_blank" rel="noopener">View site</a>
-      <form method="post" action="{{ url_for('admin_logout') }}">
+      <form method="post" action="{{ url_for('admin_logout') }}" style="margin:0">
         <input type="hidden" name="csrf" value="{{ csrf_token() }}">
         <button class="ghost" type="submit">Log out</button>
       </form>
@@ -72,13 +73,13 @@
             <th>Event</th>
             <th>For</th>
             <th>Seats</th>
-            <th></th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           {% for e in events %}
           <tr>
-            <td class="num">{{ e.date }}<br><span class="muted">{{ e.time }}</span></td>
+            <td class="num"><b>{{ e.date }}</b><br><span class="muted">{{ e.time }}</span></td>
             <td><b>{{ e.title }}</b><br><span class="muted">{{ e.venue or 'No venue yet' }}</span>{% if e.date < today
                 %} <span class="muted">(past)</span>{% endif %}</td>
             <td>{{ e.audience.replace(',', ', ') }}</td>
@@ -153,9 +154,9 @@
             <td>
               <div class="row-actions">
                 {% if r.status == 'confirmed' %}
-                <span style="color: var(--ok); font-weight: 700; font-size: 13px;">CONFIRMED</span>
+                <span style="color: var(--admin-ok); font-weight: 700; font-size: 13px;">CONFIRMED</span>
                 {% elif r.status == 'rejected' %}
-                <span style="color: var(--err); font-weight: 700; font-size: 13px;">REJECTED</span>
+                <span style="color: var(--admin-err); font-weight: 700; font-size: 13px;">REJECTED</span>
                 <form method="post" action="{{ url_for('admin_confirm_registration', reg_id=r.id) }}">
                   <input type="hidden" name="csrf" value="{{ csrf_token() }}">
                   <button class="accept" type="submit">Accept</button>

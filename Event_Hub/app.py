@@ -1,28 +1,38 @@
-from dotenv import load_dotenv
-load_dotenv()
 import os
 import sqlite3
 import csv
 import io
+import re
 from datetime import date
-from flask import Flask, render_template, request, redirect, url_for, session, flash, make_response, jsonify
+from dotenv import load_dotenv
+from flask import (
+    Flask, render_template, request, redirect, 
+    url_for, session, flash, make_response, jsonify
+)
+
+load_dotenv()
 
 app = Flask(__name__)
 
-
+# Security & Session Configuration
 app.secret_key = os.environ.get('SECRET_KEY', 'default-secret-key')
 ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'admin123')
+
+DATABASE = "database.db"
 
 @app.context_processor
 def inject_csrf():
     return dict(csrf_token=lambda: "dummy-csrf-token")
 
-DATABASE = "database.db"
-
 def get_db():
     conn = sqlite3.connect(DATABASE)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL;")
+    conn.execute("PRAGMA foreign_keys=ON;")
     return conn
+
+def is_ajax():
+    return request.headers.get('X-Requested-With') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept', '')
 
 def ensure_column(conn, table, column, definition):
     cursor = conn.cursor()
@@ -104,6 +114,8 @@ def read_event_form(form):
         "image": image
     }
 
+# --- Public Routes ---
+
 @app.route('/')
 def index():
     host_data = {
@@ -127,7 +139,12 @@ def api_events():
     cursor.execute("SELECT * FROM events ORDER BY date ASC")
     events = [dict(row) for row in cursor.fetchall()]
 
-    cursor.execute("SELECT event_id, SUM(seats) as total_seats FROM registrations WHERE status != 'rejected' GROUP BY event_id")
+    cursor.execute("""
+        SELECT event_id, SUM(seats) as total_seats 
+        FROM registrations 
+        WHERE status != 'rejected' 
+        GROUP BY event_id
+    """)
     taken = {row["event_id"]: row["total_seats"] or 0 for row in cursor.fetchall()}
     conn.close()
 
@@ -137,8 +154,8 @@ def api_events():
 
 @app.route("/api/register", methods=["POST"])
 def api_register():
-    data = request.json or request.form
-    event_id = data.get("event_id")
+    data = request.get_json(silent=True) or request.form
+    event_id = data.get("event_id") or data.get("event")
     name = clean(data.get("name"), 100)
     phone = clean(data.get("phone"), 20)
     email = clean(data.get("email"), 120)
@@ -149,8 +166,14 @@ def api_register():
         seats = 1
     message = clean(data.get("message"), 300)
 
-    if not name or not phone or not event_id:
-        return jsonify({"success": False, "error": "Name, phone and event are required."}), 400
+    if not name or not phone or not email or not event_id:
+        return jsonify({"success": False, "error": "Name, phone, email, and event selection are required."}), 400
+
+    if not re.match(r'^[0-9]{10}$', phone):
+        return jsonify({"success": False, "error": "Mobile number must be exactly 10 digits."}), 400
+
+    if not re.match(r'^[^\s@]+@[^\s@]+\.[^\s@]+$', email):
+        return jsonify({"success": False, "error": "Please enter a valid email address."}), 400
 
     conn = get_db()
     cursor = conn.cursor()
@@ -158,7 +181,7 @@ def api_register():
     event = cursor.fetchone()
     if not event:
         conn.close()
-        return jsonify({"success": False, "error": "Event not found."}), 404
+        return jsonify({"success": False, "error": "Selected event was not found."}), 404
 
     cursor.execute("""
         INSERT INTO registrations (event_id, event_title, name, phone, email, role, seats, message, status)
@@ -166,7 +189,9 @@ def api_register():
     """, (event["id"], event["title"], name, phone, email, role, seats, message))
     conn.commit()
     conn.close()
-    return jsonify({"success": True, "message": "Registration successful! Waiting for host confirmation."})
+    return jsonify({"success": True, "message": "Registration successful! Waiting for host confirmation."}), 200
+
+# --- Admin Routes ---
 
 @app.route("/admin/login", methods=["GET", "POST"])
 def admin_login():
@@ -175,7 +200,6 @@ def admin_login():
         
     if request.method == "POST":
         password = request.form.get("password", "")
-        
         if password == ADMIN_PASSWORD:
             session["admin_logged_in"] = True
             flash("Logged in successfully.", "ok")
@@ -202,24 +226,35 @@ def admin_dashboard():
     events = cursor.fetchall()
     cursor.execute("SELECT * FROM registrations ORDER BY id DESC")
     regs = cursor.fetchall()
-    cursor.execute("SELECT event_id, SUM(seats) as total_seats FROM registrations WHERE status != 'rejected' GROUP BY event_id")
+    cursor.execute("""
+        SELECT event_id, SUM(seats) as total_seats 
+        FROM registrations 
+        WHERE status != 'rejected' 
+        GROUP BY event_id
+    """)
     taken = {row["event_id"]: row["total_seats"] or 0 for row in cursor.fetchall()}
     conn.close()
     
     audiences = ["Students", "Teachers", "Public", "Parents", "Alumni"]
     today_str = date.today().isoformat()
-    default_pass = (ADMIN_PASSWORD == 'securepassword123')
+    default_pass = (ADMIN_PASSWORD in ['admin123', 'securepassword123'])
     
     return render_template("admin.html", events=events, regs=regs, taken=taken, audiences=audiences, today=today_str, default_password=default_pass)
 
 @app.route("/admin/event/add", methods=["POST"])
 def admin_add_event():
     if not session.get("admin_logged_in"):
+        if is_ajax():
+            return jsonify({"success": False, "error": "Unauthorized"}), 401
         return redirect(url_for("admin_login"))
+
     data = read_event_form(request.form)
     if not data["title"] or not data["date"]:
+        if is_ajax():
+            return jsonify({"success": False, "error": "Title and Date are required."}), 400
         flash("Title and Date are required.", "err")
         return redirect(url_for("admin_dashboard"))
+
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
@@ -228,13 +263,19 @@ def admin_add_event():
     """, (data["title"], data["date"], data["time"], data["capacity"], data["venue"], data["address"], data["audience"], data["info"], data["image"]))
     conn.commit()
     conn.close()
+
+    if is_ajax():
+        return jsonify({"success": True, "message": "Event added successfully."})
     flash("Event added successfully.", "ok")
     return redirect(url_for("admin_dashboard"))
 
 @app.route("/admin/event/edit/<int:ev_id>", methods=["POST"])
 def admin_edit_event(ev_id):
     if not session.get("admin_logged_in"):
+        if is_ajax():
+            return jsonify({"success": False, "error": "Unauthorized"}), 401
         return redirect(url_for("admin_login"))
+
     data = read_event_form(request.form)
     conn = get_db()
     cursor = conn.cursor()
@@ -244,55 +285,82 @@ def admin_edit_event(ev_id):
     """, (data["title"], data["date"], data["time"], data["capacity"], data["venue"], data["address"], data["audience"], data["info"], data["image"], ev_id))
     conn.commit()
     conn.close()
+
+    if is_ajax():
+        return jsonify({"success": True, "message": "Event updated successfully."})
     flash("Event updated successfully.", "ok")
     return redirect(url_for("admin_dashboard"))
 
 @app.route("/admin/event/delete/<int:ev_id>", methods=["POST"])
 def admin_delete_event(ev_id):
     if not session.get("admin_logged_in"):
+        if is_ajax():
+            return jsonify({"success": False, "error": "Unauthorized"}), 401
         return redirect(url_for("admin_login"))
+
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("DELETE FROM events WHERE id = ?", (ev_id,))
     cursor.execute("DELETE FROM registrations WHERE event_id = ?", (ev_id,))
     conn.commit()
     conn.close()
+
+    if is_ajax():
+        return jsonify({"success": True, "message": "Event deleted."})
     flash("Event deleted.", "ok")
     return redirect(url_for("admin_dashboard"))
 
 @app.route("/admin/reg/confirm/<int:reg_id>", methods=["POST"])
 def admin_confirm_registration(reg_id):
     if not session.get("admin_logged_in"):
+        if is_ajax():
+            return jsonify({"success": False, "error": "Unauthorized"}), 401
         return redirect(url_for("admin_login"))
+
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("UPDATE registrations SET status = 'confirmed' WHERE id = ?", (reg_id,))
     conn.commit()
     conn.close()
+
+    if is_ajax():
+        return jsonify({"success": True, "message": "Registration confirmed."})
     flash("Registration confirmed.", "ok")
     return redirect(url_for("admin_dashboard"))
 
 @app.route("/admin/reg/reject/<int:reg_id>", methods=["POST"])
 def admin_reject_registration(reg_id):
     if not session.get("admin_logged_in"):
+        if is_ajax():
+            return jsonify({"success": False, "error": "Unauthorized"}), 401
         return redirect(url_for("admin_login"))
+
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("UPDATE registrations SET status = 'rejected' WHERE id = ?", (reg_id,))
     conn.commit()
     conn.close()
+
+    if is_ajax():
+        return jsonify({"success": True, "message": "Registration rejected."})
     flash("Registration rejected.", "err")
     return redirect(url_for("admin_dashboard"))
 
 @app.route("/admin/reg/delete/<int:reg_id>", methods=["POST"])
 def admin_delete_registration(reg_id):
     if not session.get("admin_logged_in"):
+        if is_ajax():
+            return jsonify({"success": False, "error": "Unauthorized"}), 401
         return redirect(url_for("admin_login"))
+
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("DELETE FROM registrations WHERE id = ?", (reg_id,))
     conn.commit()
     conn.close()
+
+    if is_ajax():
+        return jsonify({"success": True, "message": "Registration deleted."})
     flash("Registration deleted.", "ok")
     return redirect(url_for("admin_dashboard"))
 
